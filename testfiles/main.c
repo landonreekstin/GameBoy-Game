@@ -10,6 +10,78 @@ Sprite design: Christian Blaney
 
 #define SPRITE_SCROLL_SPEED 10
 
+struct Sprite {
+  unsigned char pixelData[16];
+  uint8_t id;
+  uint8_t initTile;
+  uint8_t maxTile;
+  uint8_t x;
+  uint8_t y;
+  uint8_t gravity;
+  uint8_t velocity;
+}
+
+void change_sprite_tile(struct Sprite s);
+void animate_sprite(struct Sprite s);
+void translate_sprite(struct Sprite s);
+void sprite_setup(struct Sprite s);
+
+// ------------ Sprite functions ----------------
+
+/** Changes current sprite tile to the next in the char array.
+ *  @param maxTile  the max tile index of the sprite
+ *  @param sprite   index of the sprite to change
+*/
+void change_sprite_tile(struct Sprite s) {
+    uint8_t currentTile = get_sprite_tile(s.id);
+    if (currentTile < s.maxTile - 1) {
+        set_sprite_tile(s.id, ++currentTile);
+    }
+    else {
+        set_sprite_tile(s.id, 0);
+    }
+}
+
+/** Loops through sprite tiles for a given sprite.
+ * @param sprite   index of the sprite to animate
+*/
+void animate_sprite(struct Sprite s) {
+    for (uint8_t tileIdx = 0; tileIdx < s.maxTile; tileIdx++) {
+        set_sprite_tile(s.id, tileIdx);
+        delay(350);
+    }
+}
+
+void translate_sprite(struct Sprite s) {
+    
+    switch(joypad()) {
+        case J_LEFT:
+            scroll_sprite(s.id, -1 * SPRITE_SCROLL_SPEED, 0);
+            change_sprite_tile(s);
+            break;
+        case J_RIGHT:
+            scroll_sprite(s.id, 1 * SPRITE_SCROLL_SPEED, 0);
+            change_sprite_tile(s);
+            break;
+        case J_UP:
+            scroll_sprite(s.id, 0, -1 * SPRITE_SCROLL_SPEED);
+            change_sprite_tile(s);
+            break;
+        case J_DOWN:
+            scroll_sprite(s.id, 0, 1 * SPRITE_SCROLL_SPEED);
+            change_sprite_tile(s);
+            break;
+    }
+    delay(100);
+}
+
+void sprite_setup(struct Sprite s) {   // in the future will pass in parameters to specify what sprite is being setup
+    set_sprite_data(0, s.maxTile, s.pixelData);    // (initial tile, final tile, sprite char array)
+    set_sprite_tile(0, s.initTile);                      // (sprite index, tile)
+    move_sprite(0, s.x, s.y);                     // (sprite index, x, y)
+    SHOW_SPRITES;
+}
+
 
 // ----------------- Map functions ----------------
 /*
@@ -26,62 +98,6 @@ void scroll_map() {
     delay(100);
 }
 */
-
-//------------------ Sprite functions ---------------------
-
-/** Changes current sprite tile to the next in the char array.
- *  @param maxTile  the max tile index of the sprite
- *  @param sprite   index of the sprite to change
-*/
-void change_sprite_tile(uint8_t maxTile, int sprite) {
-    uint8_t currentTile = get_sprite_tile(sprite);
-    if (currentTile < maxTile - 1) {
-        set_sprite_tile(sprite, ++currentTile);
-    }
-    else {
-        set_sprite_tile(sprite, 0);
-    }
-}
-
-/** Loops through sprite tiles for a given sprite.
- * @param sprite   index of the sprite to animate
-*/
-void animate_sprite(int sprite) {
-    for (uint8_t tileIdx = 0; tileIdx < 5; tileIdx++) {
-        set_sprite_tile(sprite, tileIdx);
-        delay(350);
-    }
-}
-
-void translate_sprite(int sprite) {
-    
-    switch(joypad()) {
-        case J_LEFT:
-            scroll_sprite(sprite, -1 * SPRITE_SCROLL_SPEED, 0);
-            change_sprite_tile(5, 0);
-            break;
-        case J_RIGHT:
-            scroll_sprite(sprite, 1 * SPRITE_SCROLL_SPEED, 0);
-            change_sprite_tile(5, 0);
-            break;
-        case J_UP:
-            scroll_sprite(sprite, 0, -1 * SPRITE_SCROLL_SPEED);
-            change_sprite_tile(5, 0);
-            break;
-        case J_DOWN:
-            scroll_sprite(sprite, 0, 1 * SPRITE_SCROLL_SPEED);
-            change_sprite_tile(5, 0);
-            break;
-    }
-    delay(100);
-}
-
-void sprite_setup() {   // in the future will pass in parameters to specify what sprite is being setup
-    set_sprite_data(0, 5, SmileToSurprised);    // (initial tile, final tile, sprite char array)
-    set_sprite_tile(0, 0);                      // (sprite index, tile)
-    move_sprite(0, 88, 78);                     // (sprite index, x, y)
-    SHOW_SPRITES;
-}
 
 // ----------------- Sound functions ---------------
 void sound_setup() {
