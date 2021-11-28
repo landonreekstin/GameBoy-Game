@@ -10,12 +10,16 @@
 ;--------------------------------------------------------
 	.globl _main
 	.globl _event_loop
+	.globl _wait
+	.globl _sample_sound
+	.globl _sound_setup
 	.globl _sprite_setup
 	.globl _translate_sprite
 	.globl _animate_sprite
 	.globl _change_sprite_tile
 	.globl _printf
 	.globl _set_sprite_data
+	.globl _wait_vbl_done
 	.globl _joypad
 	.globl _delay
 	.globl _SmileToSurprised
@@ -52,13 +56,13 @@ _SmileToSurprised::
 ; code
 ;--------------------------------------------------------
 	.area _CODE
-;main.c:20: void change_sprite_tile(uint8_t maxTile, int sprite) {
+;main.c:36: void change_sprite_tile(uint8_t maxTile, int sprite) {
 ;	---------------------------------
 ; Function change_sprite_tile
 ; ---------------------------------
 _change_sprite_tile::
 	add	sp, #-4
-;main.c:21: uint8_t currentTile = get_sprite_tile(sprite);
+;main.c:37: uint8_t currentTile = get_sprite_tile(sprite);
 	ldhl	sp,	#7
 	ld	a, (hl)
 	ldhl	sp,	#0
@@ -78,7 +82,7 @@ _change_sprite_tile::
 	ld	a, (hl)
 	ldhl	sp,	#1
 	ld	(hl), a
-;main.c:22: if (currentTile < maxTile - 1) {
+;main.c:38: if (currentTile < maxTile - 1) {
 	ldhl	sp,	#6
 	ld	c, (hl)
 	ld	b, #0x00
@@ -106,7 +110,7 @@ _change_sprite_tile::
 	scf
 00115$:
 	jr	NC, 00102$
-;main.c:23: set_sprite_tile(sprite, ++currentTile);
+;main.c:39: set_sprite_tile(sprite, ++currentTile);
 	ldhl	sp,	#1
 ;c:/gbdk/include/gb/gb.h:1326: shadow_OAM[nb].tile=tile;
 	ld	a, (hl-)
@@ -121,7 +125,7 @@ _change_sprite_tile::
 	inc	hl
 	inc	hl
 	ld	(hl), c
-;main.c:23: set_sprite_tile(sprite, ++currentTile);
+;main.c:39: set_sprite_tile(sprite, ++currentTile);
 	jr	00107$
 00102$:
 ;c:/gbdk/include/gb/gb.h:1326: shadow_OAM[nb].tile=tile;
@@ -135,23 +139,23 @@ _change_sprite_tile::
 	inc	hl
 	inc	hl
 	ld	(hl), #0x00
-;main.c:26: set_sprite_tile(sprite, 0);
+;main.c:42: set_sprite_tile(sprite, 0);
 00107$:
-;main.c:28: }
+;main.c:44: }
 	add	sp, #4
 	ret
-;main.c:33: void animate_sprite(int sprite) {
+;main.c:49: void animate_sprite(int sprite) {
 ;	---------------------------------
 ; Function animate_sprite
 ; ---------------------------------
 _animate_sprite::
-;main.c:34: for (uint8_t tileIdx = 0; tileIdx < 5; tileIdx++) {
+;main.c:50: for (uint8_t tileIdx = 0; tileIdx < 5; tileIdx++) {
 	ld	c, #0x00
 00104$:
 	ld	a, c
 	sub	a, #0x05
 	ret	NC
-;main.c:35: set_sprite_tile(sprite, tileIdx);
+;main.c:51: set_sprite_tile(sprite, tileIdx);
 	ldhl	sp,	#2
 	ld	b, (hl)
 ;c:/gbdk/include/gb/gb.h:1326: shadow_OAM[nb].tile=tile;
@@ -168,29 +172,29 @@ _animate_sprite::
 	inc	hl
 	inc	hl
 	ld	(hl), c
-;main.c:36: delay(350);
+;main.c:52: delay(350);
 	push	bc
 	ld	de, #0x015e
 	push	de
 	call	_delay
 	pop	hl
 	pop	bc
-;main.c:34: for (uint8_t tileIdx = 0; tileIdx < 5; tileIdx++) {
+;main.c:50: for (uint8_t tileIdx = 0; tileIdx < 5; tileIdx++) {
 	inc	c
-;main.c:38: }
+;main.c:54: }
 	jr	00104$
-;main.c:40: void translate_sprite(int sprite) {
+;main.c:56: void translate_sprite(int sprite) {
 ;	---------------------------------
 ; Function translate_sprite
 ; ---------------------------------
 _translate_sprite::
-;main.c:42: switch(joypad()) {
+;main.c:58: switch(joypad()) {
 	call	_joypad
 	ld	c, e
-;main.c:44: scroll_sprite(sprite, -1 * SPRITE_SCROLL_SPEED, 0);
+;main.c:60: scroll_sprite(sprite, -1 * SPRITE_SCROLL_SPEED, 0);
 	ldhl	sp,	#2
 	ld	e, (hl)
-;main.c:42: switch(joypad()) {
+;main.c:58: switch(joypad()) {
 	ld	a, c
 	dec	a
 	jr	Z, 00102$
@@ -202,9 +206,9 @@ _translate_sprite::
 	sub	a, #0x08
 	jr	Z, 00104$
 	jr	00105$
-;main.c:43: case J_LEFT:
+;main.c:59: case J_LEFT:
 00101$:
-;main.c:44: scroll_sprite(sprite, -1 * SPRITE_SCROLL_SPEED, 0);
+;main.c:60: scroll_sprite(sprite, -1 * SPRITE_SCROLL_SPEED, 0);
 ;c:/gbdk/include/gb/gb.h:1415: OAM_item_t * itm = &shadow_OAM[nb];
 	ld	bc, #_shadow_OAM+0
 	ld	l, e
@@ -222,7 +226,7 @@ _translate_sprite::
 	ld	a, (hl)
 	add	a, #0xf6
 	ld	(hl), a
-;main.c:45: change_sprite_tile(5, 0);
+;main.c:61: change_sprite_tile(5, 0);
 	ld	de, #0x0000
 	push	de
 	ld	a, #0x05
@@ -230,11 +234,11 @@ _translate_sprite::
 	inc	sp
 	call	_change_sprite_tile
 	add	sp, #3
-;main.c:46: break;
+;main.c:62: break;
 	jr	00105$
-;main.c:47: case J_RIGHT:
+;main.c:63: case J_RIGHT:
 00102$:
-;main.c:48: scroll_sprite(sprite, 1 * SPRITE_SCROLL_SPEED, 0);
+;main.c:64: scroll_sprite(sprite, 1 * SPRITE_SCROLL_SPEED, 0);
 ;c:/gbdk/include/gb/gb.h:1415: OAM_item_t * itm = &shadow_OAM[nb];
 	ld	l, e
 ;	spillPairReg hl
@@ -252,7 +256,7 @@ _translate_sprite::
 	ld	a, (hl)
 	add	a, #0x0a
 	ld	(hl), a
-;main.c:49: change_sprite_tile(5, 0);
+;main.c:65: change_sprite_tile(5, 0);
 	ld	de, #0x0000
 	push	de
 	ld	a, #0x05
@@ -260,11 +264,11 @@ _translate_sprite::
 	inc	sp
 	call	_change_sprite_tile
 	add	sp, #3
-;main.c:50: break;
+;main.c:66: break;
 	jr	00105$
-;main.c:51: case J_UP:
+;main.c:67: case J_UP:
 00103$:
-;main.c:52: scroll_sprite(sprite, 0, -1 * SPRITE_SCROLL_SPEED);
+;main.c:68: scroll_sprite(sprite, 0, -1 * SPRITE_SCROLL_SPEED);
 ;c:/gbdk/include/gb/gb.h:1415: OAM_item_t * itm = &shadow_OAM[nb];
 	ld	bc, #_shadow_OAM+0
 	ld	l, e
@@ -282,7 +286,7 @@ _translate_sprite::
 	ld	(hl+), a
 	ld	a, (hl)
 	ld	(hl), a
-;main.c:53: change_sprite_tile(5, 0);
+;main.c:69: change_sprite_tile(5, 0);
 	ld	de, #0x0000
 	push	de
 	ld	a, #0x05
@@ -290,11 +294,11 @@ _translate_sprite::
 	inc	sp
 	call	_change_sprite_tile
 	add	sp, #3
-;main.c:54: break;
+;main.c:70: break;
 	jr	00105$
-;main.c:55: case J_DOWN:
+;main.c:71: case J_DOWN:
 00104$:
-;main.c:56: scroll_sprite(sprite, 0, 1 * SPRITE_SCROLL_SPEED);
+;main.c:72: scroll_sprite(sprite, 0, 1 * SPRITE_SCROLL_SPEED);
 ;c:/gbdk/include/gb/gb.h:1415: OAM_item_t * itm = &shadow_OAM[nb];
 	ld	bc, #_shadow_OAM+0
 	ld	l, e
@@ -312,7 +316,7 @@ _translate_sprite::
 	ld	(hl+), a
 	ld	a, (hl)
 	ld	(hl), a
-;main.c:57: change_sprite_tile(5, 0);
+;main.c:73: change_sprite_tile(5, 0);
 	ld	de, #0x0000
 	push	de
 	ld	a, #0x05
@@ -320,21 +324,21 @@ _translate_sprite::
 	inc	sp
 	call	_change_sprite_tile
 	add	sp, #3
-;main.c:59: }
+;main.c:75: }
 00105$:
-;main.c:60: delay(100);
+;main.c:76: delay(100);
 	ld	de, #0x0064
 	push	de
 	call	_delay
 	pop	hl
-;main.c:61: }
+;main.c:77: }
 	ret
-;main.c:63: void sprite_setup() {
+;main.c:79: void sprite_setup() {   // in the future will pass in parameters to specify what sprite is being setup
 ;	---------------------------------
 ; Function sprite_setup
 ; ---------------------------------
 _sprite_setup::
-;main.c:64: set_sprite_data(0, 5, SmileToSurprised);    // (initial tile, final tile, sprite char array)
+;main.c:80: set_sprite_data(0, 5, SmileToSurprised);    // (initial tile, final tile, sprite char array)
 	ld	de, #_SmileToSurprised
 	push	de
 	ld	hl, #0x500
@@ -350,40 +354,96 @@ _sprite_setup::
 	ld	a, #0x4e
 	ld	(hl+), a
 	ld	(hl), #0x58
-;main.c:67: SHOW_SPRITES;
+;main.c:83: SHOW_SPRITES;
 	ldh	a, (_LCDC_REG + 0)
 	or	a, #0x02
 	ldh	(_LCDC_REG + 0), a
-;main.c:68: }
+;main.c:84: }
 	ret
-;main.c:74: void event_loop() {
+;main.c:87: void sound_setup() {
+;	---------------------------------
+; Function sound_setup
+; ---------------------------------
+_sound_setup::
+;main.c:88: NR52_REG = 0x80; // enable sound
+	ld	a, #0x80
+	ldh	(_NR52_REG + 0), a
+;main.c:89: NR50_REG = 0x77; // set volume for both channels to max
+	ld	a, #0x77
+	ldh	(_NR50_REG + 0), a
+;main.c:90: NR51_REG = 0xFF; // select channels to use
+	ld	a, #0xff
+	ldh	(_NR51_REG + 0), a
+;main.c:91: }
+	ret
+;main.c:93: void sample_sound() {
+;	---------------------------------
+; Function sample_sound
+; ---------------------------------
+_sample_sound::
+;main.c:100: NR10_REG = 0x16; 
+	ld	a, #0x16
+	ldh	(_NR10_REG + 0), a
+;main.c:107: NR11_REG = 0x40;
+	ld	a, #0x40
+	ldh	(_NR11_REG + 0), a
+;main.c:116: NR12_REG = 0x73;  
+	ld	a, #0x73
+	ldh	(_NR12_REG + 0), a
+;main.c:121: NR13_REG = 0x00;   
+	xor	a, a
+	ldh	(_NR13_REG + 0), a
+;main.c:130: NR14_REG = 0xC3;
+	ld	a, #0xc3
+	ldh	(_NR14_REG + 0), a
+;main.c:131: }
+	ret
+;main.c:138: void wait(UINT8 numloops){
+;	---------------------------------
+; Function wait
+; ---------------------------------
+_wait::
+;main.c:140: for(i = 0; i < numloops; i++){
+	ld	c, #0x00
+00103$:
+	ld	a, c
+	ldhl	sp,	#2
+	sub	a, (hl)
+	ret	NC
+;main.c:141: wait_vbl_done();
+	call	_wait_vbl_done
+;main.c:140: for(i = 0; i < numloops; i++){
+	inc	c
+;main.c:143: }
+	jr	00103$
+;main.c:149: void event_loop() {
 ;	---------------------------------
 ; Function event_loop
 ; ---------------------------------
 _event_loop::
-;main.c:77: while(1) {
+;main.c:152: while(1) {
 00102$:
-;main.c:79: translate_sprite(0);
+;main.c:154: translate_sprite(0);
 	ld	de, #0x0000
 	push	de
 	call	_translate_sprite
 	pop	hl
-;main.c:83: }
+;main.c:158: }
 	jr	00102$
-;main.c:85: void main() {
+;main.c:160: void main() {
 ;	---------------------------------
 ; Function main
 ; ---------------------------------
 _main::
-;main.c:86: printf("My first \nGameBoy game!");
+;main.c:161: printf("My first \nGameBoy game!");
 	ld	de, #___str_0
 	push	de
 	call	_printf
 	pop	hl
-;main.c:87: sprite_setup();
+;main.c:162: sprite_setup();
 	call	_sprite_setup
-;main.c:88: event_loop();
-;main.c:89: }
+;main.c:163: event_loop();
+;main.c:164: }
 	jp	_event_loop
 ___str_0:
 	.ascii "My first "
